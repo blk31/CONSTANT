@@ -2,9 +2,9 @@ from pathlib import Path
 
 
 vocab = {
-    "base": open(Path(__file__).absolute().parent / "vocab" / "eng.txt", encoding="utf-8").read(),
-    "chinese": open(Path(__file__).absolute().parent / "vocab" / "cn.txt", encoding="utf-8").read(),
-    "vi": open(Path(__file__).absolute().parent / "vocab" / "vi.txt", encoding="utf-8").read(),
+    "base": open(Path(__file__).absolute().parent / "vocab" / "eng.txt", encoding="utf-8").read().strip(),
+    "chinese": open(Path(__file__).absolute().parent / "vocab" / "cn.txt", encoding="utf-8").read().strip(),
+    "vi": open(Path(__file__).absolute().parent / "vocab" / "vi.txt", encoding="utf-8").read().strip(),
 }
 
 

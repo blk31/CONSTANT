@@ -46,6 +46,7 @@ pretrained/
 # Data
 data/raw/
 data/preprocess/
+data/processed/
 data/compositional_layout_resources/
 *.npz
 *.h5

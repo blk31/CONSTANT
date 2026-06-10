@@ -7,6 +7,7 @@ import cv2
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 from pathlib import Path
+from typing import Optional, Union
 from omegaconf import OmegaConf
 from typing import List, Union
 import urllib.request
@@ -311,8 +312,8 @@ def determine_optimal_num_workers(device="cuda", verbose=True):
 
 def download_pretrained_model(
     url: str,
-    cache_dir: str | Path = "pretrained",
-    filename: str | None = None,
+    cache_dir: Union[str, Path] = "pretrained",
+    filename: Optional[str] = None,
     force_download: bool = False,
 ) -> str:
     """
@@ -413,9 +414,11 @@ def resolve_pretrained_path(pretrained_config) -> Union[str, tuple]:
         ignore_patterns = pretrained_config.get("ignore_patterns", None)
         force_download = pretrained_config.get("force_download", False)
 
-        if Path(cache_dir).exists() and not force_download:
-            print(f"Using cached pretrained model: {cache_dir}")
-            return cache_dir
+        resolved_dir = str(Path(cache_dir) / subfolder) if subfolder else cache_dir
+
+        if Path(resolved_dir).exists() and not force_download:
+            print(f"Using cached pretrained model: {resolved_dir}")
+            return resolved_dir
 
         print(f"Downloading model from HuggingFace: {repo_id}")
         if subfolder:
@@ -424,14 +427,14 @@ def resolve_pretrained_path(pretrained_config) -> Union[str, tuple]:
         try:
             snapshot_download(
                 repo_id=repo_id,
-                allow_patterns=f"{subfolder}/*",
+                allow_patterns=f"{subfolder}/*" if subfolder else None,
                 ignore_patterns=ignore_patterns,
                 local_dir=cache_dir,
                 local_dir_use_symlinks=False,
             )
-            print(f"Model downloaded to: {cache_dir}")
+            print(f"Model downloaded to: {resolved_dir}")
 
-            return cache_dir
+            return resolved_dir
 
         except Exception as e:
             raise RuntimeError(f"Failed to download model from HuggingFace ({repo_id}): {e}")

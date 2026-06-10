@@ -8,7 +8,8 @@ from PIL import Image
 import os
 from pathlib import Path
 from omegaconf import OmegaConf
-from helpers import initialize_from_config, get_obj_from_str
+from helpers import get_obj_from_str
+from src.data import tokenizer as tokenizer_module
 from src.data.constant import CHAR_WIDTH, FIXED_HEIGHT
 import cv2
 
@@ -140,8 +141,12 @@ class HandwritingGenerationManager:
         config_path = self.dataset_configs[dataset_name]["config_path"]
         config = OmegaConf.load(config_path)
 
-        test_dataset = initialize_from_config(config.testdataset)
-        tokenizer = test_dataset.tokenizer
+        tok_params = config.testdataset.params
+        tok_type = tok_params.get("tokenizer_type", "Char_Tokenizer")
+        tokenizer = getattr(tokenizer_module, tok_type)(
+            max_length=tok_params.get("max_length", None),
+            dset_name=tok_params.get("dset_name", "base"),
+        )
 
         if not hasattr(config.text_encoder.params, "input_size"):
             config.text_encoder.params.input_size = tokenizer.vocab_size
@@ -259,6 +264,19 @@ class HandwritingGenerationManager:
         # Preprocess reference image
         ref_pil = Image.open(self.selected_reference_image).convert("RGB")
         style_image = self.preprocess_image(ref_pil, dataset_name, strategy, fixed_size).to(self.device)
+
+        if " " in text_prompt:
+            raise gr.Error(
+                "This model generates one word at a time — spaces are not supported. "
+                "Please enter a single word (e.g. 'hello')."
+            )
+
+        invalid_chars = [c for c in text_prompt if c not in tokenizer.str2idx]
+        if invalid_chars:
+            raise gr.Error(
+                f"Unsupported characters for {dataset_name}: {sorted(set(invalid_chars))}. "
+                f"Allowed: {tokenizer.vocab}"
+            )
 
         text_embedding = tokenizer.encode(text_prompt)
         text_embedding = np.array(text_embedding, dtype="int64")
@@ -384,9 +402,9 @@ with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
             gr.Markdown("### 2. Enter Text & Generate")
 
             text_input = gr.Textbox(
-                label="Text to Generate",
-                placeholder="Type the word to be generated here...",
-                lines=2,
+                label="Text to Generate (single word, letters only)",
+                placeholder="e.g. hello",
+                lines=1,
             )
 
             with gr.Accordion("Advanced Settings", open=False):
